@@ -21,17 +21,30 @@ db = pymongo.MongoClient().weixin.text_articles
 # 用来去重
 md5 = lambda s: hashlib.md5(s).hexdigest()
 
+# def texts():
+#     texts_set = set()
+#     for a in tqdm(db.find(no_cursor_timeout=True).limit(3000000)):
+#         if md5(a['text'].encode('utf-8')) in texts_set:
+#             continue
+#         else:
+#             texts_set.add(md5(a['text'].encode('utf-8')))
+#             for t in re.split(u'[^\u4e00-\u9fa50-9a-zA-Z]+', a['text']): # 去除无意义字符
+#                 if t:
+#                     yield t
+
+
 def texts():
     texts_set = set()
-    for a in tqdm(db.find(no_cursor_timeout=True).limit(3000000)):
-        if md5(a['text'].encode('utf-8')) in texts_set:
+    for line in open('data/texts.txt', 'r', encoding='utf-8').readlines():
+        if md5(line.encode('utf-8')) in texts_set:
+        # if md5(a['text'].encode('utf-8')) in texts_set:
             continue
         else:
-            texts_set.add(md5(a['text'].encode('utf-8')))
-            for t in re.split(u'[^\u4e00-\u9fa50-9a-zA-Z]+', a['text']): # 去除无意义字符
+            texts_set.add(md5(line.encode('utf-8')))
+            for t in re.split(u'[^\u4e00-\u9fa50-9a-zA-Z]+', line): # 去除无意义字符
                 if t:
                     yield t
-
+    print(u'最终计算了{}条文本'.format(len(texts_set)))
 
 # ---- N-grams计数 ----
 
@@ -62,7 +75,9 @@ min_proba = {2:5, 3:25, 4:125}
 
 def is_keep(s, min_proba):
     if len(s) >= 2:
-        score = min([total*ngrams[s]/(ngrams[s[:i+1]]*ngrams[i+1:]) for i in range(len(s) - 1)])
+        # print(s)
+        score = min([total*ngrams[s]/(ngrams[s[:i+1]]*ngrams[s[i+1:]]) for i in range(len(s) - 1)])
+        # print(score)
         if score > min_proba[len(s)]:
             return True
     else:
